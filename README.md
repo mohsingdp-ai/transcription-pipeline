@@ -96,8 +96,7 @@ client ──► API ──► object storage (audio)
 - **Storage:** audio lives in S3/GCS, keyed by job ID. Clients upload big files straight to it with a pre-signed URL. Job status, language, duration, model version, errors and segments (as JSONB) live in Postgres. Audio is encrypted and auto-deleted after N days; transcripts are kept.
 - **Retries and recovery:** each job moves through queued → processing → done/failed. A worker only marks a job finished after the result is saved, so a crashed job goes back on the queue. Temporary errors retry up to 3 times, waiting longer each time. Bad input fails at once with no retry. After the last retry, the job moves to a dead-letter queue and raises an alert. Jobs are keyed by ID, so retries never create duplicates. Jobs stuck in "processing" get re-queued, and long files save progress per chunk.
 - **API:**
-  - `POST /v1/transcriptions` returns `202` with a job ID.
-  - `GET /v1/transcriptions/{id}` returns the status and the result, as JSON or SRT.
-  - An optional webhook fires when the job is done.
-
-  Add API keys, rate limits and OpenAPI docs. Short clips keep today's synchronous endpoint.
+    - `POST /v1/transcriptions` returns `202` with a job ID.
+    - `GET /v1/transcriptions/{id}` returns the status and the result, as JSON or SRT.
+    - An optional webhook fires when the job is done.
+    - Add API keys, rate limits and OpenAPI docs. Short clips keep today's synchronous endpoint.
