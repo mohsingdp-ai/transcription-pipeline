@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transcriber</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; max-width: 760px; margin: 2rem auto; padding: 0 1rem; color: #222; background: #fff; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: .4rem .5rem; border-bottom: 1px solid #ddd; vertical-align: top; }
+    td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; color: #555; }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>Transcriber</h1>
+  <form id="form">
+    <label for="file">Audio file (WAV, MP3, M4A, FLAC, OGG, WebM)</label><br>
+    <input id="file" name="file" type="file" accept=".wav,.mp3,.m4a,.flac,.ogg,.webm" required>
+    <button>Transcribe</button>
+  </form>
+  <p id="status" role="status"></p>
+
+  <section id="result" hidden>
+    <p id="meta"></p>
+    <h2>Transcript</h2>
+    <p id="text"></p>
+    <h2>Segments</h2>
+    <table>
+      <thead><tr><th>Time</th><th>Text</th></tr></thead>
+      <tbody id="segments"></tbody>
+    </table>
+  </section>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const time = (s) => new Date(s * 1000).toISOString().slice(11, 21); // hh:mm:ss.s
+
+    $("form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = event.target.querySelector("button");
+      button.disabled = true;
+      $("result").hidden = true;
+      $("status").className = "";
+      $("status").textContent = "Transcribing… long files can take a few minutes.";
+      try {
+        const res = await fetch("/transcribe", { method: "POST", body: new FormData(event.target) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Server error (${res.status})`);
+
+        $("meta").textContent = `Language: ${data.language} · Duration: ${time(data.duration)} · ${data.segments.length} segments`;
+        $("text").textContent = data.text || "(no speech detected)";
+        $("segments").replaceChildren(...data.segments.map((s) => {
+          const row = document.createElement("tr");
+          row.insertCell().textContent = `${time(s.start)} – ${time(s.end)}`;
+          row.insertCell().textContent = s.text;
+          return row;
+        }));
+        $("status").textContent = "";
+        $("result").hidden = false;
+      } catch (err) {
+        $("status").className = "error";
+        $("status").textContent = `Error: ${err.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
